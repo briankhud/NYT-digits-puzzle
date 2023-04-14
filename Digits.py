@@ -1,6 +1,7 @@
 from enum import Enum
 
 gDebugPrint = False
+gOptimize = True
 
 class Ops(Enum):
     MULTIPLY = "*"
@@ -31,6 +32,7 @@ class OpNode:
         self.operation = operation
         self.val = val
         self.isLeaf = isLeaf
+        self.cacheval = None
 
     @classmethod
     def leaf(cls, val):
@@ -41,7 +43,7 @@ class OpNode:
         return cls(l, r, operation, None, False)
 
     def opAsString(self):
-        if self.val:
+        if self.isLeaf:
             return ''
         return str(self.operation)
 
@@ -49,6 +51,11 @@ class OpNode:
         if( self.isLeaf ):
             return self.val
         else:
+            if gOptimize:
+                if not self.cacheval:
+                    self.cacheval = self.operation.eval(self.left, self.right)
+                return self.cacheval
+
             return self.operation.eval(self.left, self.right)
 
     def __add__(self, o):
@@ -60,7 +67,7 @@ class OpNode:
     def __mul__(self, o):
         return self.value() * o.value()
 
-    # dividing two objects (note we will return float values)
+    # dividing two objects (note we *will* return float values)
     def __truediv__(self, o):
         return 1.0*self.value() / o.value()
 
@@ -70,6 +77,7 @@ class OpNode:
         else:
             leftSteps = self.left.getEquationSteps()
             rightSteps = self.right.getEquationSteps()
+            
             left = self.left.value()
             op = self.opAsString()
             right = self.right.value()
@@ -81,7 +89,8 @@ class OpNode:
     def __str__(self):
         if( self.isLeaf ):
             return str(self.value())
-        return f'({str(self.left)} {self.opAsString()} {str(self.right)})'
+        else:
+            return f'({str(self.left)} {self.opAsString()} {str(self.right)})'
 
 
 def debugPrint( input ):
@@ -92,19 +101,23 @@ def debugPrint( input ):
 # Returns a tree of operations with the provided list of numbers that achieves a total of "target"
 # Note: intermediate results along the way must be non-negative whole numbers, but zero is
 # Method should end up memoized for efficiency
-def recursiveSolveAlternate(target, numlist):
+
+def recursiveSolve(target, numlist):
     #base case
     if( len(numlist) == 2):
         for op in Ops:
-            left = OpNode.leaf(numlist[0])
-            right = OpNode.leaf(numlist[1])
+            left = OpNode.leaf(numlist[0])  # A on left
+            right = OpNode.leaf(numlist[1]) # B on right
             tree = OpNode.op(left, right, op)
             value = tree.value()
             if value == target and isinstance(value, int) and value >= 0:
                 return tree
+
+            # If A / B or A - B didn't work, let's reverse
+            # it and try B / A or B - A
             if op is Ops.DIVIDE or op is Ops.SUBTRACT:
-                left = OpNode.leaf(numlist[1])
-                right = OpNode.leaf(numlist[0])
+                left = OpNode.leaf(numlist[1])  #B on left
+                right = OpNode.leaf(numlist[0]) #A on right
                 tree = OpNode.op(left, right, op)
                 value = tree.value()
                 if value == target and isinstance(value, int) and value >= 0:
@@ -118,12 +131,12 @@ def recursiveSolveAlternate(target, numlist):
                 node = []
                 if(op == Ops.ADD):
                     if( target - num >= 0):
-                        node = recursiveSolveAlternate(target - num, sublist)
+                        node = recursiveSolve(target - num, sublist)
                         if node:
                          left = OpNode.leaf(num)
                          return OpNode.op(left, node, op.ADD)
                 elif(op == Ops.SUBTRACT):
-                        node = recursiveSolveAlternate(target+num, sublist)
+                        node = recursiveSolve(target+num, sublist)
                         if node:
                             if target >= num:
                                 right = OpNode.leaf(num)
@@ -133,24 +146,25 @@ def recursiveSolveAlternate(target, numlist):
                                 return OpNode.op(left, node, op.SUBTRACT)
                 elif(op == Ops.MULTIPLY):
                     if( target % num == 0 ):
-                        node = recursiveSolveAlternate(int(target / num), sublist)
+                        node = recursiveSolve(int(target / num), sublist)
                         if node:
                             left = OpNode.leaf(num)
                             return OpNode.op(left, node, op.MULTIPLY)
                 #We're dealing with divide
                 else:
                     if( num % target == 0):
-                        node = recursiveSolveAlternate(int(num / target), sublist)
+                        node = recursiveSolve(int(num / target), sublist)
                         if node:
                             left = OpNode.leaf(num)
                             return OpNode.op(left, node, op.DIVIDE)
                     if( isinstance(target, int)):   
-                        node = recursiveSolveAlternate(target * num, sublist)
+                        node = recursiveSolve(target * num, sublist)
                         if node:
                             right = OpNode.leaf(num)
                             return OpNode.op(node, right, op.DIVIDE)
 
-#To do - unit tests / test file
+#Todo - unit tests / test file
+#Todo - execution parameters for file name and display output options
 
 def main():
     fname = "problem.txt"
@@ -174,7 +188,7 @@ def main():
         print(f'{target}: {numberList}')
 
         #result = recursiveSolveNumbers(target, numberList, "")
-        result = recursiveSolveAlternate(target, numberList)
+        result = recursiveSolve(target, numberList)
         print( f'{result} = {result.value()}' )
         for step in result.getEquationSteps():
             print(step)
