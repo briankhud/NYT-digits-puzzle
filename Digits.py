@@ -9,14 +9,20 @@ class Ops(Enum):
     DIVIDE = "/"
 
     def __str__(self):
-        if self.value == Ops.ADD:
-            return '+'
-        elif self.value == Ops.SUBTRACT:
-            return '-'
-        elif self.value == Ops.DIVIDE:
-            return '/'
+        return self.value
+
+    def eval(self, left, right):
+        if self.value == "+":
+            return left + right
+        elif self.value == "-":
+            return left - right
+        elif self.value == "/":
+            #There is probably a bug here regarding int vs float!
+            return left / right
         else:
-            return '*'
+            # self.op == Op.MULTIPLY
+            #There is probably a bug here regarding int vs float!
+            return left * right        
 
 class OpNode:
     def __init__(self, l, r, operation, val, isLeaf):
@@ -42,17 +48,8 @@ class OpNode:
     def value(self):
         if( self.isLeaf ):
             return self.val
-        if self.operation == Ops.ADD:
-            return self.left + self.right
-        elif self.operation == Ops.SUBTRACT:
-            return self.left - self.right
-        elif self.operation == Ops.DIVIDE:
-            #There is probably a bug here!
-            return self.left / self.right
         else:
-            # self.op == Op.MULTIPLY
-            #There is probably a bug here!
-            return self.left * self.right
+            return self.operation.eval(self.left, self.right)
 
     def __add__(self, o):
         return self.value() + o.value()
