@@ -93,7 +93,7 @@ def debugPrint( input ):
 
 
 # Returns a tree of operations with the provided list of numbers that achieves a total of "target"
-# Note: intermediate results along the way must be non-negative whole numbers, but zero is allowed
+# Note: intermediate results along the way must be non-negative whole numbers, but zero is
 # Method should end up memoized for efficiency
 def recursiveSolveAlternate(target, numlist):
     #base case
