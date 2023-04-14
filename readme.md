@@ -1,4 +1,4 @@
-# nyt-digits
+# nyt-digits-puzzle
 
 This is a simple python script which solves the New York Times "digits" puzzle game that was in Beta as of 04/14/23
 
